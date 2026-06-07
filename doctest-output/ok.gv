@@ -1,0 +1,9 @@
+// Whats a digraph?
+digraph {
+	a [label=AH]
+	b [label=ok]
+	c [label="i get it"]
+	b -> c
+	a -> c
+	b -> a [constraint=false]
+}
