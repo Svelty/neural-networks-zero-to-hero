@@ -1,7 +1,6 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-# %matplotlib inline
 
 from graphviz import Digraph
 
