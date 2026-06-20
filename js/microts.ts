@@ -29,7 +29,7 @@ class Value {
     return out;
   }
 
-  multipy(other: Value): Value {
+  multiply(other: Value): Value {
     const out = new Value(this.data * other.data, [this, other], "*");
     out._backward = () => {
       this.grad += other.data * out.grad;
@@ -39,7 +39,7 @@ class Value {
   }
 
   negative(): Value {
-    return this.multipy(new Value(-1));
+    return this.multiply(new Value(-1));
   }
 
   subtract(other: Value): Value {
@@ -55,7 +55,7 @@ class Value {
   }
 
   divide(other: Value) {
-    return this.multipy(other.powerOf(-1));
+    return this.multiply(other.powerOf(-1));
   }
 
   tanh() {
@@ -72,7 +72,7 @@ class Value {
     const x = this.data;
     const out = new Value(Math.exp(x), [this], "exp");
     out._backward = () => {
-      this.grad += this.data * out.grad;
+      this.grad += out.data * out.grad;
     };
     return out;
   }
@@ -118,14 +118,18 @@ class Neuron {
   forward(x: Value[]) {
     let act = null;
     for (let i = 0; i < x.length; i++) {
-      const wi = x[i];
-      const xi = this.w[i];
+      const xi = x[i];
+      const wi = this.w[i];
 
-      act == null ? (act = xi.multipy(wi)) : (act = act.add(xi.multipy(wi)));
+      act == null ? (act = xi.multiply(wi)) : (act = act.add(xi.multiply(wi)));
     }
     act = act == null ? (act = this.b) : act.add(this.b);
     const out = act.tanh();
     return out;
+  }
+
+  parameters() {
+    return this.w.concat([this.b]);
   }
 }
 
@@ -141,6 +145,16 @@ class Layer {
       this.neurons[i].forward(x),
     );
     return outs.length == 1 ? outs[0] : outs;
+  }
+
+  parameters() {
+    const params = [];
+    for (let neuron of this.neurons) {
+      for (let p of neuron.parameters()) {
+        params.push(p);
+      }
+    }
+    return params;
   }
 }
 
@@ -162,6 +176,14 @@ class MLP {
     }
     //@ts-ignore
     return x;
+  }
+
+  parameters() {
+    const params = [];
+    for (let layer of this.layers) {
+      for (let p of layer.parameters()) params.push(p);
+    }
+    return params;
   }
 }
 
@@ -197,3 +219,39 @@ for (const layer of n.layers) {
     }
   }
 }
+
+const xs = [
+  [2.0, 3.0, -1.0],
+  [3.0, -1.0, 0.5],
+  [0.5, 1.0, 1.0],
+  [1.0, 1.0, -1.0],
+];
+const ys = [1.0, -1.0, -1.0, 1.0];
+
+let ypred;
+for (let i = 0; i < 20; i++) {
+  ypred = xs.map((x) => n.forward(x.map((v) => new Value(v))));
+
+  let loss = null;
+  for (let j = 0; j < ypred.length; j++) {
+    const ygt = ys[j];
+    const yout = ypred[j];
+    loss == null
+      ? (loss = new Value(ygt).subtract(yout).powerOf(2))
+      : (loss = loss.add(new Value(ygt).subtract(yout).powerOf(2)));
+  }
+
+  for (let p of n.parameters()) {
+    p.grad = 0;
+  }
+  loss?.backward();
+
+  for (let p of n.parameters()) {
+    p.data += -0.05 * p.grad;
+  }
+
+  console.log(i, loss?.data);
+}
+
+console.log("finished");
+console.log(ypred);
