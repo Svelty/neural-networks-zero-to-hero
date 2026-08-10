@@ -11,3 +11,8 @@ dependencies = [
     "numpy>=2.4.4",
     "torch>=2.11.0",
 ]
+
+[tool.uv.workspace]
+members = [
+    "nanogpt",
+]
